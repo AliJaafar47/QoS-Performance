@@ -1,0 +1,472 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>967</width>
+    <height>665</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>967</width>
+    <height>665</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>967</width>
+    <height>665</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>QoS-Performance GUI</string>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QWidget" name="widget" native="true">
+      <widget class="QScrollArea" name="scrollArea">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>30</y>
+         <width>381</width>
+         <height>611</height>
+        </rect>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="scrollAreaWidgetContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>379</width>
+          <height>609</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QLabel" name="label">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>381</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>13</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>History of previous tests</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="main_icon">
+       <property name="geometry">
+        <rect>
+         <x>490</x>
+         <y>40</y>
+         <width>291</width>
+         <height>251</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="pixmap">
+        <pixmap>../../../../../.designer/static/qos_web.png</pixmap>
+       </property>
+       <property name="scaledContents">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>480</x>
+         <y>260</y>
+         <width>321</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>30</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>QoS Performance</string>
+       </property>
+      </widget>
+      <widget class="QWidget" name="verticalLayoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>500</x>
+         <y>330</y>
+         <width>281</width>
+         <height>231</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="2,2,2">
+        <property name="spacing">
+         <number>1</number>
+        </property>
+        <property name="margin">
+         <number>1</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="setting_button">
+          <property name="text">
+           <string>Test Settings</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>../../../../../static/configure.jpg</normaloff>../../../../../static/configure.jpg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="new_test_button">
+          <property name="text">
+           <string>Run new test</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>../../../../../static/service.png</normaloff>../../../../../static/service.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="import_button">
+          <property name="text">
+           <string>Import test results</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>../../../../../static/open-folder.png</normaloff>../../../../../static/open-folder.png</iconset>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QCommandLinkButton" name="help_button">
+       <property name="geometry">
+        <rect>
+         <x>860</x>
+         <y>600</y>
+         <width>71</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Help</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>../../../../../static/help.png</normaloff>../../../../../static/help.png</iconset>
+       </property>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <action name="actionQuit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>&amp;Open data file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionCloseTab">
+   <property name="text">
+    <string>&amp;Close tab</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="actionPlotSelector">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Plot selector</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Settings</string>
+   </property>
+  </action>
+  <action name="actionMetadata">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Metadata</string>
+   </property>
+  </action>
+  <action name="actionLoadExtra">
+   <property name="text">
+    <string>&amp;Load additional data file</string>
+   </property>
+  </action>
+  <action name="actionOtherExtra">
+   <property name="text">
+    <string>&amp;Add other open data files</string>
+   </property>
+  </action>
+  <action name="actionClearExtra">
+   <property name="text">
+    <string>&amp;Clear extra data files</string>
+   </property>
+  </action>
+  <action name="actionNextTab">
+   <property name="text">
+    <string>&amp;Next tab</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Tab</string>
+   </property>
+  </action>
+  <action name="actionPrevTab">
+   <property name="text">
+    <string>Pr&amp;evious tab</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Backtab</string>
+   </property>
+  </action>
+  <action name="actionSavePlot">
+   <property name="text">
+    <string>&amp;Save plot to file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>&amp;Refresh plot</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+  <action name="actionScaleOpen">
+   <property name="text">
+    <string>&amp;Scale open data files</string>
+   </property>
+  </action>
+  <action name="actionCloseAll">
+   <property name="text">
+    <string>Close &amp;all tabs</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+W</string>
+   </property>
+  </action>
+  <action name="checkZeroY">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Zero Y-axis</string>
+   </property>
+  </action>
+  <action name="checkInvertY">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Invert latency Y-axis</string>
+   </property>
+  </action>
+  <action name="checkLogScale">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>L&amp;og scale</string>
+   </property>
+  </action>
+  <action name="checkScaleMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Scale mode</string>
+   </property>
+  </action>
+  <action name="checkSubplotCombine">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Subplot &amp;combine</string>
+   </property>
+  </action>
+  <action name="checkAnnotation">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Annotation</string>
+   </property>
+  </action>
+  <action name="checkTitle">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Title</string>
+   </property>
+  </action>
+  <action name="checkLegend">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Legend</string>
+   </property>
+  </action>
+  <action name="checkFilterLegend">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Filter legend</string>
+   </property>
+  </action>
+  <action name="actionOpenFiles">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Open files</string>
+   </property>
+  </action>
+  <action name="actionNewTab">
+   <property name="text">
+    <string>&amp;New tab</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionNewTest">
+   <property name="text">
+    <string>&amp;Run new test</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="checkHighlight">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Highlight on hover</string>
+   </property>
+  </action>
+  <action name="actionLogEntries">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Log entries</string>
+   </property>
+  </action>
+  <action name="checkDebugLog">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show &amp;debug log entries</string>
+   </property>
+  </action>
+  <action name="checkExceptionLog">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show &amp;exception backtraces</string>
+   </property>
+  </action>
+  <action name="actionHelpRunning">
+   <property name="text">
+    <string>&amp;Running Flent</string>
+   </property>
+  </action>
+  <action name="actionHelpTests">
+   <property name="text">
+    <string>The supplied &amp;tests</string>
+   </property>
+  </action>
+  <action name="actionHelpAbout">
+   <property name="text">
+    <string>&amp;About Flent</string>
+   </property>
+  </action>
+  <action name="actionHelpGUI">
+   <property name="text">
+    <string>The Flent &amp;GUI</string>
+   </property>
+  </action>
+  <action name="actionHelpBug">
+   <property name="text">
+    <string>Report a &amp;bug</string>
+   </property>
+  </action>
+  <action name="actionPlotSettings">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Plot &amp;settings</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
