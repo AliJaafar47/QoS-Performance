@@ -2964,13 +2964,13 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
         config = ConfigParser()
         for row in range(0,allRows): 
             try :
-                config[self.ui.tableWidget.item(row,0).text()] = {'Traffic': self.ui.tableWidget.item(row,0).text(),'DSCP_Value': self.ui.tableWidget.item(row,1).text(),'Protocol': self.ui.tableWidget.item(row,2).text(),'Option': self.ui.tableWidget.item(row,3).text()}
+                config[self.ui.tableWidget.item(row,0).text()] = {'Traffic': self.ui.tableWidget.item(row,0).text(),'DSCP_Value': self.ui.tableWidget.item(row,1).text(),'Protocol': self.ui.tableWidget.item(row,2).text(),'Bandwidth(MB/s)': self.ui.tableWidget.item(row,3).text(),'Option': self.ui.tableWidget.item(row,4).text()}
             except :
                 config.add_section(self.ui.tableWidget.item(row,0).text())
                 config.set(self.ui.tableWidget.item(row,0).text(), 'Traffic', self.ui.tableWidget.item(row,0).text())
                 config.set(self.ui.tableWidget.item(row,0).text(), 'DSCP_Value', self.ui.tableWidget.item(row,1).text())
                 config.set(self.ui.tableWidget.item(row,0).text(), 'Protocol', self.ui.tableWidget.item(row,2).text())
-                #config.set(self.ui.tableWidget.item(row,0).text(), 'Option', self.ui.tableWidget.item(row,4).text())
+                config.set(self.ui.tableWidget.item(row,0).text(), 'Bandwidth(MB/s)', self.ui.tableWidget.item(row,3).text())
         
         with open('config/'+self.configfile, 'w') as configfile:
             config.write(configfile)
@@ -2990,7 +2990,9 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
                 self.ui.tableWidget.setItem(j,k, QTableWidgetItem(""))
             if k == 2 : 
                 self.ui.tableWidget.setItem(j,k, QTableWidgetItem(""))
-            if k == 3 :
+            if k == 3 : 
+                self.ui.tableWidget.setItem(j,k, QTableWidgetItem(""))
+            if k == 4 :
                 self.btn = QPushButton('Delete')
                 self.btn.setObjectName("install")
                 self.ui.tableWidget.setCellWidget(j,k, self.btn)
@@ -3008,11 +3010,12 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
         config = self.get_config_data()
         #print(config)
         # Set Horizontal Header
-        self.ui.tableWidget.setColumnCount(4)
-        self.ui.tableWidget.setHorizontalHeaderLabels(['Traffic','DSCP value','Protocol','Option'])
+        self.ui.tableWidget.setColumnCount(5)
+        self.ui.tableWidget.setHorizontalHeaderLabels(['Traffic','DSCP value','Protocol','  Bandwidth(MB/s)','Option'])
         
         headerHorizontal = self.ui.tableWidget.horizontalHeader()
-        headerHorizontal.setStretchLastSection(True)      
+        headerHorizontal.setSectionResizeMode(1)
+        #headerHorizontal.setStretchLastSection(True)      
         #headerHorizontal.resizeColumnsToContents()  def get_config_data(self):
         cfg = ConfigParser()
         cfg.read('config/'+self.configfile)
@@ -3022,6 +3025,8 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
             for name, value in cfg.items(section):
                 x[name] = value
             config.append(x)
+            
+        print("config :",config)
         #return (config)
 
         # Set Vertical Header
@@ -3040,7 +3045,9 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
                     self.ui.tableWidget.setItem(j,k, QTableWidgetItem(get_value_from_json(i,"dscp_value")))
                 if k == 2 : 
                     self.ui.tableWidget.setItem(j,k, QTableWidgetItem(get_value_from_json(i,"protocol")))
-                if k == 3 :
+                if k == 3 : 
+                    self.ui.tableWidget.setItem(j,k, QTableWidgetItem(get_value_from_json(i,"bandwidth(mb/s)")))
+                if k == 4 :
                     self.btn = QPushButton('Delete')
                     self.btn.setObjectName("Delete")
                     self.ui.tableWidget.setCellWidget(j,k, self.btn)
