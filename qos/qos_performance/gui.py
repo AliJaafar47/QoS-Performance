@@ -572,6 +572,7 @@ class NewTestWindow(getUiClass("run_new_test.ui")):
         self.ui.cancel_button.clicked.connect(self.handler_cancel_button)
         self.qosRemarquing=QosRemarquing()
         self.performance=performance()
+        self.wmm_test= wmm_test()
 
         
         
@@ -582,7 +583,9 @@ class NewTestWindow(getUiClass("run_new_test.ui")):
             self.qosRemarquing.show()
             
         elif str(self.ui.comboBox.currentText()) == "WMM Tests":
+            self.wmm_test.show()
             print("WMM Tests")
+            
 #Niwar
 #17/07/2018
         else:
@@ -2891,6 +2894,180 @@ class ResultWidget(getUiClass("resultwidget.ui")):
     def show(self):
         super(ResultWidget, self).show()
         add_log_handler(self.logEntries, replay=False)
+        
+##########################################################################################################
+
+#ahmed_test
+class wmm_test(getUiClass("wmmTests.ui")):   
+    def __init__(self):
+        self.configfile="config_WMM_test.ini"
+        super(wmm_test, self).__init__()
+       
+        Ui_MainWindow, QtBaseClass = uic.loadUiType(os.path.join(DATA_DIR, 'ui', "wmmTests.ui"))
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        
+        setting_icon1 = QtGui.QIcon()
+        setting_icon1.addPixmap(QtGui.QPixmap("ui/static/configure.jpg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        
+        self.ui.setting_button.setIcon(setting_icon1)
+
+        self.ui.setting_button.clicked.connect(self.handler_customize_button)
+        self.customize = config_wmmTest()
+        
+    def handler_customize_button(self):
+        self.customize.show()
+
+class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
+    def __init__(self):
+        self.configfile="config_WMM_test.ini"
+        super(config_wmmTest, self).__init__()
+        
+        Ui_MainWindow, QtBaseClass = uic.loadUiType(os.path.join(DATA_DIR, 'ui', "Wmm_Configuration.ui"))
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+            #set the add icons
+        add_new_host_icon = QtGui.QIcon()
+        add_new_host_icon.addPixmap(QtGui.QPixmap("ui/static/add.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.add_new_host.setIcon(add_new_host_icon)
+        
+         ## add a handler to cancel button
+        self.ui.cancel_button.clicked.connect(self.handler_cancel_button)
+            ## add a handler to ok button
+        self.ui.ok_button.clicked.connect(self.handler_ok_button)
+        ## add new host button handler
+        self.ui.add_new_host.clicked.connect(self.handler_add_new_host_button)
+        self.set_config_table()
+        
+        
+      
+    
+        
+    
+    
+    def handler_ok_button(self):
+        number = self.get_config_hosts_number()
+        allRows = self.ui.tableWidget.rowCount()
+        #print(allRows)
+        #print("Ok button clicked")
+        configuration = []
+        for row in range(0,allRows):
+            twi0 = self.ui.tableWidget.item(row,0).text()
+            #print(twi0)
+            if twi0 in configuration :
+                QMessageBox.warning(self, "Message", "Invalid data input: 2 or more hosts are having the same host_name") 
+                return 0 
+            else :
+                configuration.append(twi0)
+        
+                
+        config = ConfigParser()
+        for row in range(0,allRows): 
+            try :
+                config[self.ui.tableWidget.item(row,0).text()] = {'Traffic': self.ui.tableWidget.item(row,0).text(),'DSCP_Value': self.ui.tableWidget.item(row,1).text(),'Protocol': self.ui.tableWidget.item(row,2).text(),'Option': self.ui.tableWidget.item(row,3).text()}
+            except :
+                config.add_section(self.ui.tableWidget.item(row,0).text())
+                config.set(self.ui.tableWidget.item(row,0).text(), 'Traffic', self.ui.tableWidget.item(row,0).text())
+                config.set(self.ui.tableWidget.item(row,0).text(), 'DSCP_Value', self.ui.tableWidget.item(row,1).text())
+                config.set(self.ui.tableWidget.item(row,0).text(), 'Protocol', self.ui.tableWidget.item(row,2).text())
+                #config.set(self.ui.tableWidget.item(row,0).text(), 'Option', self.ui.tableWidget.item(row,4).text())
+        
+        with open('config/'+self.configfile, 'w') as configfile:
+            config.write(configfile)
+        self.close()
+
+    def handler_cancel_button(self):
+        #print("closing..")
+        self.close()
+        
+    def handler_add_new_host_button(self):
+        j= self.ui.tableWidget.rowCount()
+        self.ui.tableWidget.setRowCount(j+1)
+        for k in range(0,8):
+            if k == 0 :
+                self.ui.tableWidget.setItem(j,k, QTableWidgetItem(""))
+            if k == 1 : 
+                self.ui.tableWidget.setItem(j,k, QTableWidgetItem(""))
+            if k == 2 : 
+                self.ui.tableWidget.setItem(j,k, QTableWidgetItem(""))
+            if k == 3 :
+                self.btn = QPushButton('Delete')
+                self.btn.setObjectName("install")
+                self.ui.tableWidget.setCellWidget(j,k, self.btn)
+                self.btn.clicked.connect(self.handler_delete_button(j))
+           
+
+    
+            
+    def handler_delete_button(self, index):
+        def calluser():
+            self.ui.tableWidget.removeRow(index)
+        return calluser            
+    def set_config_table(self):
+        ## Get the config file 
+        config = self.get_config_data()
+        #print(config)
+        # Set Horizontal Header
+        self.ui.tableWidget.setColumnCount(4)
+        self.ui.tableWidget.setHorizontalHeaderLabels(['Traffic','DSCP value','Protocol','Option'])
+        
+        headerHorizontal = self.ui.tableWidget.horizontalHeader()
+        headerHorizontal.setStretchLastSection(True)      
+        #headerHorizontal.resizeColumnsToContents()  def get_config_data(self):
+        cfg = ConfigParser()
+        cfg.read('config/'+self.configfile)
+        config = []
+        for section in cfg.sections():
+            x = {}
+            for name, value in cfg.items(section):
+                x[name] = value
+            config.append(x)
+        #return (config)
+
+        # Set Vertical Header
+        self.ui.tableWidget.setRowCount(self.get_config_hosts_number())
+
+        # Print the keys and values
+        j = 0
+        k = 0
+        print(config)
+        for i in config:
+            for k in range(0,5):
+                if k == 0 :
+                    self.ui.tableWidget.setItem(j,k, QTableWidgetItem(get_value_from_json(i,"traffic")))
+                    print(get_value_from_json(i,"traffic"))
+                if k == 1 : 
+                    self.ui.tableWidget.setItem(j,k, QTableWidgetItem(get_value_from_json(i,"dscp_value")))
+                if k == 2 : 
+                    self.ui.tableWidget.setItem(j,k, QTableWidgetItem(get_value_from_json(i,"protocol")))
+                if k == 3 :
+                    self.btn = QPushButton('Delete')
+                    self.btn.setObjectName("Delete")
+                    self.ui.tableWidget.setCellWidget(j,k, self.btn)
+                    self.btn.clicked.connect(self.handler_delete_button(j))
+            
+
+            j = j+1
+    
+    def get_config_data(self):
+        cfg = ConfigParser()
+        cfg.read('config/'+self.configfile)
+        config = []
+        for section in cfg.sections():
+            x = {}
+            for name, value in cfg.items(section):
+                x[name] = value
+            config.append(x)
+        return (config)
+    
+    def get_config_hosts_number(self):
+        cfg = ConfigParser()
+        cfg.read('config/'+self.configfile)
+        i=0
+        for section in cfg.sections():
+            i=i+1
+        return i   
+##########################################################################################################
        
 
 __all__ = ['run_gui']
