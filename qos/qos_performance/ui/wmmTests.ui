@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1046</width>
-    <height>480</height>
+    <width>1329</width>
+    <height>963</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,14 +26,20 @@
     <property name="title">
      <string>Progress</string>
     </property>
-    <widget class="QTextBrowser" name="textBrowser">
+    <widget class="QPlainTextEdit" name="logTextEdit">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="geometry">
       <rect>
-       <x>0</x>
-       <y>30</y>
-       <width>1011</width>
-       <height>131</height>
+       <x>120</x>
+       <y>10</y>
+       <width>841</width>
+       <height>121</height>
       </rect>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
      </property>
     </widget>
    </widget>
@@ -55,7 +61,7 @@
      <rect>
       <x>130</x>
       <y>400</y>
-      <width>891</width>
+      <width>841</width>
       <height>25</height>
      </rect>
     </property>
@@ -66,7 +72,7 @@
    <widget class="QGroupBox" name="groupBox_1">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>10</y>
       <width>1011</width>
       <height>301</height>
@@ -104,36 +110,7 @@
       <string>Test name</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_5">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>130</y>
-       <width>81</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Test length</string>
-     </property>
-    </widget>
-    <widget class="QSpinBox" name="testLength">
-     <property name="geometry">
-      <rect>
-       <x>140</x>
-       <y>120</y>
-       <width>51</width>
-       <height>27</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>1</number>
-     </property>
-     <property name="maximum">
-      <number>10000</number>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="checkBox_NTP">
+    <widget class="QCheckBox" name="checkBox_queue">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -146,7 +123,7 @@
       <string>Show queuing State</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBox_HTTP">
+    <widget class="QCheckBox" name="checkBox_CPU">
      <property name="geometry">
       <rect>
        <x>210</x>
@@ -159,7 +136,7 @@
       <string>Show CPU usage</string>
      </property>
     </widget>
-    <widget class="QRadioButton" name="radioButton">
+    <widget class="QRadioButton" name="lanwan">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -172,7 +149,7 @@
       <string>LAN-&gt;WAN</string>
      </property>
     </widget>
-    <widget class="QRadioButton" name="radioButton_2">
+    <widget class="QRadioButton" name="wanlan">
      <property name="geometry">
       <rect>
        <x>150</x>
@@ -185,7 +162,7 @@
       <string>WAN-&gt;LAN</string>
      </property>
     </widget>
-    <widget class="QRadioButton" name="radioButton_3">
+    <widget class="QRadioButton" name="bidirectional">
      <property name="geometry">
       <rect>
        <x>280</x>
@@ -197,8 +174,11 @@
      <property name="text">
       <string>Bi-directional</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
-    <widget class="QLineEdit" name="lineEdit">
+    <widget class="QLineEdit" name="test_title">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -211,8 +191,8 @@
     <widget class="QPushButton" name="setting_button">
      <property name="geometry">
       <rect>
-       <x>720</x>
-       <y>210</y>
+       <x>610</x>
+       <y>40</y>
        <width>279</width>
        <height>27</height>
       </rect>
@@ -222,10 +202,10 @@
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>../../../../../static/configure.jpg</normaloff>../../../../../static/configure.jpg</iconset>
+       <normaloff>../../../../../../../../static/configure.jpg</normaloff>../../../../../../../../static/configure.jpg</iconset>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEdit_2">
+    <widget class="QLineEdit" name="hostName">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -235,19 +215,130 @@
       </rect>
      </property>
     </widget>
-    <zorder>label</zorder>
-    <zorder>label_2</zorder>
-    <zorder>label_5</zorder>
-    <zorder>testLength</zorder>
-    <zorder>checkBox_NTP</zorder>
-    <zorder>checkBox_HTTP</zorder>
-    <zorder>radioButton</zorder>
-    <zorder>radioButton_2</zorder>
-    <zorder>radioButton_3</zorder>
-    <zorder>lineEdit</zorder>
-    <zorder>setting_button</zorder>
-    <zorder>setting_button</zorder>
-    <zorder>lineEdit_2</zorder>
+    <widget class="QPushButton" name="selectOutputDir">
+     <property name="geometry">
+      <rect>
+       <x>1120</x>
+       <y>90</y>
+       <width>33</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>33</width>
+       <height>33</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_7">
+     <property name="geometry">
+      <rect>
+       <x>610</x>
+       <y>90</y>
+       <width>81</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Test length</string>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="testLength">
+     <property name="geometry">
+      <rect>
+       <x>840</x>
+       <y>90</y>
+       <width>51</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>1</number>
+     </property>
+     <property name="maximum">
+      <number>10000</number>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="outputDir">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>120</y>
+       <width>331</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>Directory to write the data file to</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>120</y>
+       <width>121</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Output Directory</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="selectOutputDirr">
+     <property name="geometry">
+      <rect>
+       <x>480</x>
+       <y>120</y>
+       <width>31</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QTabWidget" name="viewArea">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>450</y>
+      <width>841</width>
+      <height>461</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="currentIndex">
+     <number>-1</number>
+    </property>
+    <property name="documentMode">
+     <bool>false</bool>
+    </property>
+    <property name="tabsClosable">
+     <bool>true</bool>
+    </property>
+    <property name="movable">
+     <bool>true</bool>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -255,7 +346,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1046</width>
+     <width>1329</width>
      <height>25</height>
     </rect>
    </property>

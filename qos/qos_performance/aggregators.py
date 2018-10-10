@@ -32,6 +32,8 @@ from threading import Event
 from qos_performance import runners
 from qos_performance.util import classname
 from qos_performance.loggers import get_logger
+from _operator import index
+from numpy.lib.utils import _dictlist
 
 logger = get_logger(__name__)
 
@@ -89,7 +91,7 @@ class Aggregator(object):
         self.runner_counter += 1
         instance['idx'] = idx
         self.settings.REMOTE_HOSTS = []
-        self.settings.STEP_SIZE =1
+        self.settings.STEP_SIZE =0.2
         if idx in self.settings.REMOTE_HOSTS:
             instance['remote_host'] = self.settings.REMOTE_HOSTS[idx]
         else:
@@ -105,7 +107,9 @@ class Aggregator(object):
     def aggregate(self, results):
         raise NotImplementedError()
         
-
+    #def partition(self):
+        
+    
     def collect(self):
         """Create a ProcessRunner thread for each instance and start them. Wait
         for the threads to exit, then collect the results."""
@@ -115,9 +119,14 @@ class Aggregator(object):
         result = {}
         metadata = {'series': {}, 'test_parameters': {}}
         raw_values = {}
+        ports = []
+        dictlist = []
         
         try:
             for n, i in list(self.instances.items()):
+                print('items=',list(self.instances.items()))
+                print('i=',i)
+                print('n=',n)
                 if 'run_after' in i:
                     i['start_event'] = self.instances[i['run_after']]['finish_event']  # noqa: E501
                 if 'kill_after' in i:
@@ -129,73 +138,102 @@ class Aggregator(object):
                     raise RuntimeError("Runner %s failed check: %s" % (n, e))
 
                 self.threads[n] = t   
-                break
+                #if self.settings.INDEX == "0" or self.settings.INDEX == "1" or self.settings.INDEX == "2"  :
+                    #break  
+                #break
             # Start in a separate loop once we're sure we successfully created
             # all runners
-            for t in self.threads.values():
+            
+            #for t in self.threads.values():
                 t.start()
+                break
 
             shutting_down = False
-            for n, t in list(self.threads.items()):
-                while t.is_alive():
-                    try:
-                        t.join(1)
+            #for n, t in list(self.threads.items()):
+            while t.is_alive():
+                try:
+                    t.join(1)
                         #break
                         
-                    except GracefulShutdown:
-                        if not shutting_down:
-                            logger.info(
-                                "SIGUSR1 received; initiating graceful shutdown. "
-                                "This may take a while...")
-                            self.kill_runners(graceful=True)
-                            shutting_down = True
-                        else:
-                            logger.info(
-                                "Already initiated graceful shutdown. "
-                                "Patience, please...")
+                except GracefulShutdown:
+                    if not shutting_down:
+                        logger.info(
+                            "SIGUSR1 received; initiating graceful shutdown. "
+                            "This may take a while...")
+                        self.kill_runners(graceful=True)
+                        shutting_down = True
+                    else:
+                        logger.info(
+                            "Already initiated graceful shutdown. "
+                            "Patience, please...")
 
-                metadata['series'][n] = t.metadata
-                if t.test_parameters:
-                    metadata['test_parameters'].update(t.test_parameters)
-                raw_values[n] = t.raw_values
+            metadata['series'][n] = t.metadata
+            if t.test_parameters:
+                metadata['test_parameters'].update(t.test_parameters)
+            raw_values[n] = t.raw_values
                 
-                print("raw_values[n]")
-                print(raw_values[n])
-                if not raw_values[n] :
-                    print("*****************NO result ******************.")
-                    logger.debug("*****************NO result ******************.")
+            print("raw_values[n]")
+            print(raw_values[n])
+            if not raw_values[n] :
+                print("*****************NO result ******************.")
+                logger.debug("*****************NO result ******************.")
                     
-                    return
+                return
                 
-                if hasattr(t, 'compute_result'):
+            ports = t.ports
+            print(ports)
+                #t.extraire_port_source(self, self.raw_values)
+                
+            if hasattr(t, 'compute_result'):
                     # The runner is a post-processor(Avg etc), and should be run
                     # as such (by the postprocess() method)
-                    self.postprocessors.append(t.compute_result)
-                elif t.result is None:
-                    continue
-                elif hasattr(t.result, 'keys'):
-                    if not t.result:
-                        self.failed_runners += 1
-                    for k in t.result.keys():
-                        key = "%s::%s" % (n, k)
-                        result[key] = t.result[k]
-                else:
-                    if not t.result:
-                        self.failed_runners += 1
-                    result[n] = t.result
-
+                self.postprocessors.append(t.compute_result)
+            elif hasattr(t.result, 'keys'):
+                if not t.result:
+                    self.failed_runners += 1
+                for k in t.result.keys():
+                    key = "%s::%s" % (n, k)
+                    result[key] = t.result[k]
+            else:
+                if not t.result:
+                    self.failed_runners += 1
+                result[n] = t.result
+                    
+                for i in raw_values.items():
+                    maliste=i[1]
+                    print(len(maliste))
+                        
+                aa =len(ports)
+                self.settings.LEN = aa
+                
+                for ii in range(len(ports)):
+                    listt=[]
+                    for indice in range(len(maliste)):
+                        #print(float(maliste[indice].get('portsource')))
+                        #print(float(ports[ii]))
+                        if(int(maliste[indice].get('portsource')) == int(ports[ii]) ):
+                                listt.extend([[maliste[indice].get('starttime'), maliste[indice].get('bandwidth')]])
+                    n= "TCP upload::%d" % int(ii+1)
+                    result[n] = listt       
+                            #rint(ports.index(maliste[indice].get('portsource')))
+                            #for ii in range(len (ports)):
+                            #n= "TCP upload :: %d" % (ports.index(maliste[indice].get('portsource'))+1)
+                            #result[n] = maliste[indice].get('starttime'),maliste[indice].get('bandwidth')
+                        
+                    
                 for c in t.child_results:
                     for k, v in c.items():
                         key = "%s::%s" % (n, k)
                         if key in result:
                             raise RuntimeError(
                                 "Duplicate key '%s' from child runner" % key)
+                        
                         result[key] = v
 
         except KeyboardInterrupt:
             self.kill_runners()
             raise
-
+        print("KKK",self.settings.LEN)
         logger.debug("Runner aggregation finished",
                      extra={'output': pprint.pformat(result)})
 
@@ -275,7 +313,8 @@ class TimeseriesAggregator(Aggregator):
             raise RuntimeError("No data to aggregate. Run with -L and check log "
                               "file to investigate.")
         t_0 = min(first_times)
-        t_max = max(last_times)
+        #t_max = max(last_times)
+        t_max=self.settings.LENGTH
         steps = int(math.ceil((t_max - t_0) / self.step))
 
         results.meta('T0', datetime.utcfromtimestamp(t_0))

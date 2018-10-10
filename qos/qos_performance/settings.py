@@ -58,7 +58,12 @@ DEFAULT_SETTINGS = {
 'BATCH_UUID': None,
 'BATCH_FILES':[],
 'INDEX': None,
+'INDEX1': None,
 'config':[],
+'config1':[],
+'tr':[],
+'LEN':None,
+'bidirectionnal':None,
 }
 try:
     unicode = str
@@ -316,6 +321,7 @@ test_group.add_argument(
     action="store", type=float, dest="STEP_SIZE", default=0.2,
     help="Measurement data point step size.")
 
+
 test_group.add_argument(
     "--test-parameter",
     action=Update, type=keyval, dest="TEST_PARAMETERS", metavar='key=value',
@@ -342,10 +348,50 @@ test_group.add_argument(
     "binaries being in the same places on both machines, and won't work for all "
     "runners. Can be specified multiple times.")
 test_group.add_argument(
+    "--socket-stats",
+    action="store_true", dest="SOCKET_STATS",
+    help="Parse socket stats during test. This will capture and parse socket "
+    "statistics for all TCP upload flows during a test, adding TCP cwnd and RTT "
+    "values to the test data. Requires the 'ss' utility to be present on the "
+    "system, and can fail if there are too many simultaneous upload flows; which "
+    "is why this option is not enabled by default.")
+
+test_group.add_argument(
     "-d", "--delay",
     action="store", type=int, dest="DELAY", default=5,
     help="Number of seconds to delay parts of test (such as bandwidth loaders).")
+
 tool_group = parser.add_argument_group("Test tool-related options")
+tool_group.add_argument(
+    "--control-host",
+    action="store", type=unicode, dest="CONTROL_HOST", metavar="HOST",
+    help="Hostname for control connection for test tools that support it "
+    "(netperf and D_ITG). If not supplied, this will be the same as the test "
+    "target host. The per-flow test parameter setting takes precedence of this "
+    "for multi-target tests.")
+
+tool_group.add_argument(
+    "--control-local-bind",
+    action="store", type=unicode, dest="CONTROL_LOCAL_BIND", metavar="IP",
+    help="Local IP to bind control connection to (for test tools that support it;"
+    " currently netperf). If not supplied, the value for --local-bind will be "
+    "used.")
+
+tool_group.add_argument(
+    "--netperf-control-port",
+    action="store", type=int, dest="NETPERF_CONTROL_PORT", metavar="PORT",
+    default=12865, help="Port for Netperf control server.")
+
+tool_group.add_argument(
+    "--ditg-control-port",
+    action="store", type=int, dest="DITG_CONTROL_PORT", metavar="PORT",
+    default=8000, help="Port for D-ITG control server.")
+
+tool_group.add_argument(
+    "--ditg-control-secret",
+    action="store", type=unicode, dest="DITG_CONTROL_SECRET", metavar="SECRET",
+    default='', help="Secret for D-ITG control server authentication.")
+
 tool_group.add_argument(
     "--http-getter-urllist",
     action="store", type=unicode, dest="HTTP_GETTER_URLLIST", metavar="FILENAME",
@@ -390,20 +436,6 @@ add_plotting_args(plot_group)
 
 tool_group = parser.add_argument_group("Test tool-related options")
 
-tool_group.add_argument(
-    "--control-host",
-    action="store", type=unicode, dest="CONTROL_HOST", metavar="HOST",
-    help="Hostname for control connection for test tools that support it "
-    "(netperf and D_ITG). If not supplied, this will be the same as the test "
-    "target host. The per-flow test parameter setting takes precedence of this "
-    "for multi-target tests.")
-
-tool_group.add_argument(
-    "--control-local-bind",
-    action="store", type=unicode, dest="CONTROL_LOCAL_BIND", metavar="IP",
-    help="Local IP to bind control connection to (for test tools that support it;"
-    " currently netperf). If not supplied, the value for --local-bind will be "
-    "used.")
 
 
 def get_settings_check_installed_tools(host,user,password):

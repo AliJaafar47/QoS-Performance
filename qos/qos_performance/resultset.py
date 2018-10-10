@@ -56,6 +56,7 @@ RECORDED_SETTINGS = (
     "TITLE",
     "NOTE",
     "LENGTH",
+    "LEN",
     "TOTAL_LENGTH",
     "STEP_SIZE",
     "TEST_PARAMETERS",

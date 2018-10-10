@@ -21,6 +21,7 @@
 #
 import base64
 
+import telnetlib
 import netifaces
 import os
 import sys
@@ -33,6 +34,8 @@ import tempfile
 import inspect
 import subprocess
 from itertools import chain
+from textwrap import indent
+from unicodedata import bidirectional
 
 try:
     import cPickle as pickle
@@ -212,7 +215,6 @@ def pool_init_func(settings, queue):
     plotters.init_matplotlib("-", settings.USE_MARKERS,
                              settings.LOAD_MATPLOTLIBRC)
     set_queue_handler(queue)
-
 
 
 class MainWindow(getUiClass("mainwindow.ui")):
@@ -568,6 +570,7 @@ class NewTestWindow(getUiClass("run_new_test.ui")):
         self.ui.comboBox.insertItem(1,"WMM Tests")
         self.ui.comboBox.insertItem(2,"Performance tests")
         
+        
         # handlers names 
         self.ui.ok_button.clicked.connect(self.handler_ok_button)
         self.ui.cancel_button.clicked.connect(self.handler_cancel_button)
@@ -575,8 +578,6 @@ class NewTestWindow(getUiClass("run_new_test.ui")):
         self.performance=performance()
         self.wmm_test= wmm_test()
 
-        
-        
     def handler_ok_button(self):
         if str(self.ui.comboBox.currentText()) == "QoS-Remarquing tests":
             print("QoS-Remarquing tests")
@@ -587,6 +588,9 @@ class NewTestWindow(getUiClass("run_new_test.ui")):
             self.wmm_test.show()
             print("WMM Tests")
             
+            self.settings.INDEX= "3"
+            
+            print("index1",self.settings.INDEX1)
 #Niwar
 #17/07/2018
         else:
@@ -662,7 +666,6 @@ def results_load_helper(filename):
         return None
 
 
-
 class ResultsetStore(object):
 
     def __init__(self):
@@ -717,9 +720,6 @@ class ResultsetStore(object):
         else:
             self._store[k] = [itm]
             self._order.append(k)
-
-
-
 
 
 class OpenFilesModel(QAbstractTableModel):
@@ -927,7 +927,6 @@ class performance(getUiClass("performanceTest.ui")):
         self.settings.USE_MARKERS =True
         self.load_timer = QTimer(self)
         
-
         #end add
 
         Ui_MainWindow, QtBaseClass = uic.loadUiType(os.path.join(DATA_DIR, 'ui', "performanceTest.ui"))
@@ -1576,7 +1575,7 @@ class performance(getUiClass("performanceTest.ui")):
         self.settings.TITLE = unicode(self.ui.test_title.text())
         self.settings.LENGTH = self.ui.testLength.value()
         #self.settings.TITLE = unicode(self.testTitle.text())
-        
+      
         self.settings.DATA_DIR = path
         self.settings.STEP_SIZE = 0.2
         self.settings.TEST_PARAMETERS = {}
@@ -1612,230 +1611,7 @@ class performance(getUiClass("performanceTest.ui")):
         self.monitor_timer.start()
         print ("self.monitor_timer.start()")
         
-        ''' 
-        self.settings.INDEX = str(self.ui.combobox_perf.currentIndex())
-        index = str(self.ui.combobox_perf.currentIndex())
         
-        if index == "0" :#user experience selected
-            test='http'
-            print ("running test")
-            print (test)
-            
-            if hasattr(test, 'toString'):
-                test = test.toString()
-            host = self.ui.hostName.text()
-            print(host)
-            path = self.ui.outputDir.text()
-            print(path)
-            if not test :
-                logger.error("You must select a test to run .")
-                return
-            
-            netifaces.interfaces()
-            print("netifaces.interfaces()")
-            if not host:
-                logger.error("You must set a "
-                             "hostname to connect to.")
-                return
-                #host ='eth0'
-                
-            if not os.path.isdir(path):
-                logger.error("Output directory does not exist.")
-                return
-            
-            
-            if not (self.ui.test_title.text()):
-                
-                logger.error("Test title is missing .")
-                return
-            
-            test = unicode(test)
-            host = unicode(host)
-            path = unicode(path)
-            index = unicode(index)
-            config = self.settings.config
-            
-            self.log_queue = Queue()
-            self.settings=Settings(DEFAULT_SETTINGS).copy()
-            self.settings.INPUT = []
-            self.settings.BATCH_NAMES = []
-            self.settings.HOSTS = [host]
-            self.settings.NAME = test
-            self.settings.TITLE = unicode(self.ui.test_title.text())
-            self.settings.LENGTH = self.ui.testLength.value()
-            #self.settings.TITLE = unicode(self.testTitle.text())
-            
-            self.settings.DATA_DIR = path
-            self.settings.STEP_SIZE = 0.2
-            self.settings.TEST_PARAMETERS = {}
-            #self.settings.EXTENDED_METADATA = self.extendedMetadata.isChecked()
-            self.settings.load_test(informational=True)
-            self.settings.FORMATTER = "null"
-            self.settings.TIME = datetime.utcnow()
-    
-            self.settings.DATA_FILENAME = None
-            res = resultset.new(self.settings)
-            self.settings.DATA_FILENAME = res.dump_filename
-    
-            self.total_time = self.settings.TOTAL_LENGTH
-            self.start_time = time.time()
-    
-            #self.testConfig.setEnabled(False)
-            self.ui.runButton.setText("&Abort test")
-            self.ui.runButton.setDefault(False)
-    
-            b = batch.new(self.settings)
-            print ("this is the famous b")
-            print(b)
-            self.pid = b.fork_and_run(self.log_queue)
-            self.monitor_timer.start()
-            print ("self.monitor_timer.start()") 
-            
-        elif index == "1" :
-            test='ping'
-
-            print ("running test")
-            print (test)
-            
-            if hasattr(test, 'toString'):
-                test = test.toString()
-            host = self.ui.hostName.text()
-            print(host)
-            path = self.ui.outputDir.text()
-            print(path)
-            if not test :
-                logger.error("You must select a test to run .")
-                return
-            
-            netifaces.interfaces()
-            print("netifaces.interfaces()")
-            if not host:
-                logger.error("You must set a "
-                             "hostname to connect to.")
-                return
-                #host ='eth0'
-                
-            if not os.path.isdir(path):
-                logger.error("Output directory does not exist.")
-                return
-            
-            
-            if not (self.ui.test_title.text()):
-                
-                logger.error("Test title is missing .")
-                return
-            
-            test = unicode(test)
-            host = unicode(host)
-            path = unicode(path)
-            index = unicode(index)
-            config = self.settings.config
-            
-            
-            self.log_queue = Queue()
-            self.settings=Settings(DEFAULT_SETTINGS).copy()
-            self.settings.INPUT = []
-            self.settings.BATCH_NAMES = []
-            self.settings.HOSTS = [host]
-            self.settings.NAME = test
-            self.settings.TITLE = unicode(self.ui.test_title.text())
-            self.settings.LENGTH = self.ui.testLength.value()
-            #self.settings.TITLE = unicode(self.testTitle.text())
-            
-            self.settings.DATA_DIR = path
-            self.settings.STEP_SIZE = 0.2
-            self.settings.TEST_PARAMETERS = {}
-            #self.settings.EXTENDED_METADATA = self.extendedMetadata.isChecked()
-            self.settings.load_test(informational=True)
-            self.settings.FORMATTER = "null"
-            self.settings.TIME = datetime.utcnow()
-            self.settings.config = config
-            self.settings.INDEX = index
-            
-            self.settings.DATA_FILENAME = None
-            res = resultset.new(self.settings)
-            self.settings.DATA_FILENAME = res.dump_filename
-    
-            self.total_time = self.settings.TOTAL_LENGTH
-            self.start_time = time.time()
-    
-            #self.testConfig.setEnabled(False)
-            self.ui.runButton.setText("&Abort test")
-            self.ui.runButton.setDefault(False)
-    
-            b = batch.new(self.settings)
-            print ("this is the famous b")
-            print(b)
-            self.pid = b.fork_and_run(self.log_queue)
-            self.monitor_timer.start()
-            print ("self.monitor_timer.start()") 
-        elif index == "2" :
-             
-            test = "dns"
-            print ("running test")
-            print (test)
-            
-            if hasattr(test, 'toString'):
-                test = test.toString()
-            host = self.ui.hostName.text()
-            print(host)
-            path = self.ui.outputDir.text()
-            print(path)
-            if not test or not host:
-                logger.error("You must select a test to run and a "
-                             "hostname to connect to.")
-                return
-            if not os.path.isdir(path):
-                logger.error("Output directory does not exist.")
-                return
-    
-            test = unicode(test)
-            host = unicode(host)
-            path = unicode(path)
-            index = unicode(index)
-            config = self.settings.config
-            
-            self.log_queue = Queue()
-            self.settings=Settings(DEFAULT_SETTINGS).copy()
-            self.settings.INPUT = []
-            self.settings.BATCH_NAMES = []
-            self.settings.HOSTS = [host]
-            self.settings.NAME = test
-            self.settings.STEP_SIZE = 1
-            self.settings.TEST_PARAMETERS = {}
-            self.settings.TITLE = unicode(self.ui.test_title.text())
-            self.settings.LENGTH = self.ui.testLength.value()
-            self.settings.DATA_DIR = path
-            self.settings.load_test(informational=True)
-            self.settings.FORMATTER = "null"
-            self.settings.TIME = datetime.utcnow()
-            self.settings.index = str(self.ui.combobox_perf.currentIndex())
-            self.settings.DATA_FILENAME = None
-            res = resultset.new(self.settings)
-            self.settings.DATA_FILENAME = res.dump_filename
-
-            self.total_time = self.settings.TOTAL_LENGTH
-            self.start_time = time.time()
-            self.settings.config = config
-            self.settings.INDEX = index
-            
-            #self.testConfig.setEnabled(False)
-            self.ui.runButton.setText("&Abort test")
-            self.ui.runButton.setDefault(False)
-    
-            b = batch.new(self.settings)
-            
-            print ("this is the famous b")
-            print(b)
-            
-            if (self.ui.checkBox_NTP.isChecked()):
-                print('true tt')
-                os.system("ntpdate  0.africa.pool.ntp.org")
-                print("ntpdate command executed")
-                logger.debug("ntpdate host synchronised")
-        
-            self.pid = b.fork_and_run(self.log_queue)
-            self.monitor_timer.start()'''   
 #END RUN TEST    
     def select_output_dir(self):
         directory = QFileDialog.getExistingDirectory(self,
@@ -1864,7 +1640,6 @@ class performance(getUiClass("performanceTest.ui")):
             self.ui.checkBox_NTP.setEnabled(False)
             self.ui.trafficsetting_button.setEnabled(False)
             self.ui.setting_button.setEnabled(False)
-    
     
 class OpenFilesView(QTableView):
 
@@ -1909,9 +1684,7 @@ class OpenFilesView(QTableView):
         ).column_actions(idx.column(), menu))
         menu.exec_(event.globalPos())
         event.accept()    
-        
-        
-        
+            
 '''class OpenFilesHeader(QHeaderView):
 
     def __init__(self, parent):
@@ -1985,8 +1758,7 @@ class OpenFilesView(QTableView):
     def get_name(self):
         return unicode(self.columnNameEdit.text())   '''     
         
-
-        
+ 
 class MetadataView(QTreeView):
 
     def __init__(self, parent, openFilesView):
@@ -2240,7 +2012,6 @@ class TestConfguration (getUiClass("TestConfiguration.ui")):
             i=i+1
         return i  
 
-
 #traffic rimeh
 class TrafficConfguration (getUiClass("TrafficConfiguration.ui")):
     def __init__(self):
@@ -2352,6 +2123,7 @@ class TrafficConfguration (getUiClass("TrafficConfiguration.ui")):
         j = 0
         k = 0
         self.settings.config = config1
+        
         print("lala:", self.settings.config)
         for i in config1:
             for k in range(0,7):
@@ -2440,7 +2212,6 @@ def check_running(settings):
                 pass
     return False
 
-
 class QPlainTextLogger(loggers.Handler):
 
     def __init__(self, parent, level=logging.NOTSET, widget=None,
@@ -2467,7 +2238,6 @@ class QPlainTextLogger(loggers.Handler):
 
     def write(self, p):
         pass
-
 
 #12/09 plot
 class PlotModel(QStringListModel):
@@ -2898,27 +2668,691 @@ class ResultWidget(getUiClass("resultwidget.ui")):
         
 ##########################################################################################################
 
-#ahmed_test
+#ahmed_test/ modified by rimeh
 class wmm_test(getUiClass("wmmTests.ui")):   
     def __init__(self):
         self.configfile="config_WMM_test.ini"
         super(wmm_test, self).__init__()
-       
+        self.pid = None
+        self.aborted = False
         Ui_MainWindow, QtBaseClass = uic.loadUiType(os.path.join(DATA_DIR, 'ui', "wmmTests.ui"))
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.settings = settings
+        self.settings.INPUT = []
+        self.ui.outputDir.setText("/home/rimeh/Desktop")
+        self.ui.selectOutputDirr.clicked.connect(self.select_output_dir)
         
+        self.load_queue = []
+        self.log_queue = Queue()
         setting_icon1 = QtGui.QIcon()
         setting_icon1.addPixmap(QtGui.QPixmap("ui/static/configure.jpg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        settings.LOAD_MATPLOTLIBRC =True
+        self.settings.USE_MARKERS =True
+        self.load_timer = QTimer(self)
         
         self.ui.setting_button.setIcon(setting_icon1)
-
+        
+        self.ui.runButton.clicked.connect(self.run_or_abort)
         self.ui.setting_button.clicked.connect(self.handler_customize_button)
         self.customize = config_wmmTest()
+        self.server = QLocalServer()
+        self.sockets = []
+        self.server.newConnection.connect(self.new_connection)
+        self.server.listen(os.path.join(SOCKET_DIR, "%s%d" %
+                                        (SOCKET_NAME_PREFIX, os.getpid())))
+        self.load_timer.timeout.connect(self.load_one)
+        self.open_files = OpenFilesModel(self)
+        self.monitor_timer = QTimer()
+        self.monitor_timer.setInterval(500)
+        self.monitor_timer.setSingleShot(False)
+        self.monitor_timer.timeout.connect(self.update_progress)
+        self.logEntries = QPlainTextLogger(self,
+                                           level=logging.DEBUG,
+                                           widget=self.ui.logTextEdit)
+        self.worker_pool = Pool(initializer=pool_init_func,
+                                initargs=(self.settings, self.log_queue))
         
+    
+        
+    def select_output_dir(self):
+        print("selcted")
+        directory = QFileDialog.getExistingDirectory(self,
+                                                     "Select output directory",
+                                                     self.ui.outputDir.text())
+        if directory:
+            self.ui.outputDir.setText(directory)  
+             
     def handler_customize_button(self):
         self.customize.show()
+    
+    def new_connection(self):
+        sock = self.server.nextPendingConnection()
+        self.sockets.append(sock)
+        sock.readyRead.connect(self.data_ready)
+    
+        
+    def shorten_titles(self, titles):
+        new_titles = []
+        substr = util.long_substr(titles)
+        prefix = util.long_substr(titles, prefix_only=True)
 
+        for t in titles:
+            if len(substr) > 0:
+                text = t.replace(substr, "...")
+            if len(prefix) > 0 and prefix != substr:
+                text = text.replace(prefix, "...").replace("......", "...")
+            if len(substr) == 0 or text == "...":
+                text = t
+            new_titles.append(text)
+
+        return new_titles    
+    
+    def shorten_tabs(self):
+        """Try to shorten tab labels by filtering out common substrings.
+
+        Approach: Find longest common substring and replace that with ellipses
+        in the name. Also, find longest common *prefix* and filter that out as
+        well.
+
+        Since tab titles start with the test name, and several tests are
+        commonly loaded as well, this double substring search helps cut off the
+        (common) test name in the case where the longest substring is in the
+        middle of the tab name."""
+
+        titles = []
+        long_titles = []
+        indexes = []
+        for i in range(self.ui.viewArea.count()):
+            if self.ui.viewArea.widget(i).title == ResultWidget.default_title:
+                continue
+            titles.append(self.ui.viewArea.widget(i).title)
+            long_titles.append(self.ui.viewArea.widget(i).long_title)
+            indexes.append(i)
+
+        titles = self.shorten_titles(titles)
+
+        for i, t, lt in zip(indexes, titles, long_titles):
+            self.ui.viewArea.setTabText(i, t)
+            self.ui.viewArea.setTabToolTip(i, lt)
+
+    def close_tab(self, idx=None):
+        self.busy_start()
+        if idx in (None, False):
+            idx = self.ui.viewArea.currentIndex()
+        widget = self.ui.viewArea.widget(idx)
+        if widget is not None:
+            widget.setUpdatesEnabled(False)
+            widget.disconnect_all()
+            self.ui.viewArea.removeTab(idx)
+            widget.setParent(None)
+            widget.deleteLater()
+            self.shorten_tabs()
+        self.busy_end()
+
+    def close_all(self):
+        self.busy_start()
+        widgets = []
+        for i in range(self.ui.viewArea.count()):
+            widgets.append(self.ui.viewArea.widget(i))
+        self.ui.viewArea.clear()
+        for w in widgets:
+            w.setUpdatesEnabled(False)
+            w.disconnect_all()
+            w.setParent(None)
+            w.deleteLater()
+        self.busy_end()
+
+    def move_tab(self, move_by):
+        count = self.ui.viewArea.count()
+        if count:
+            idx = self.ui.viewArea.currentIndex()
+            self.ui.viewArea.setCurrentIndex((idx + move_by) % count)
+
+    def next_tab(self):
+        self.move_tab(1)
+
+    def prev_tab(self):
+        self.move_tab(-1)
+
+    def move_plot(self, move_by):
+        model = self.ui.plotView.model()
+        if not model:
+            return
+
+        count = model.rowCount()
+        if count:
+            idx = self.ui.plotView.currentIndex()
+            row = idx.row()
+            self.ui.plotView.setCurrentIndex(model.index((row + move_by) % count))
+
+    def next_plot(self):
+        self.move_plot(1)
+
+    def prev_plot(self):
+        self.move_plot(-1)
+    
+    
+    def redraw_near(self, idx=None):
+        if idx is None:
+            idx = self.ui.viewArea.currentIndex()
+
+        rng = (CPU_COUNT + 1) // 2
+        # Start a middle, go rng steps in either direction (will duplicate the
+        # middle idx, but that doesn't matter, since multiple redraw()
+        # operations are no-op.
+        for i in chain(*[(idx+i, idx-i) for i in range(rng + 1)]):
+            while i < 0:
+                i += self.ui.viewArea.count()
+            w = self.ui.viewArea.widget(i)
+            if w:
+                w.redraw()
+    
+    def busy_start(self):
+        QApplication.setOverrideCursor(Qt.WaitCursor)   
+        
+    def busy_end(self):
+        QApplication.restoreOverrideCursor()
+            
+    
+        
+    def activate_tab(self, idx=None):
+        if idx is None:
+            return
+        widget = self.ui.viewArea.widget(idx)
+        if widget is None:
+            self.open_files.set_active_widget(None)
+            return
+
+        self.redraw_near(idx)
+
+        self.ui.plotView.setModel(widget.plotModel)
+        if widget.plotSelectionModel is not None:
+            self.ui.plotView.setSelectionModel(widget.plotSelectionModel)
+        '''self.metadataView.setModel(widget.metadataModel)
+        if widget.metadataSelectionModel is not None:
+            self.metadataView.setSelectionModel(widget.metadataSelectionModel)
+        self.update_checkboxes()'''
+        self.update_settings(widget)
+        self.update_save(widget)
+        widget.activate()
+        self.open_files.set_active_widget(widget)
+    
+    def update_save(self, widget=None):
+        if widget is None:
+            widget = self.ui.viewArea.currentWidget()
+        '''if widget:
+            self.actionSavePlot.setEnabled(widget.can_save)'''
+
+    def update_settings(self, widget=None):
+        if widget is None:
+            widget = self.ui.viewArea.currentWidget() 
+            
+    def store_in_file(self): 
+        print ("***open file" ) 
+        out = open('output.txt','w') 
+        print ("file opend")
+        
+        print ("write in file")
+        out.write(str(5*5+9))
+        print ("function written")
+        print (inspect.getfile(inspect.currentframe()) )# script filename (usually with path)
+        print (os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))) # script directory
+        out = open('output.txt','w') 
+        p = subprocess.Popen(["ls", "-l", "/etc/resolv.conf"], stdout=subprocess.PIPE)
+        output, err = p.communicate()
+        out.write(p.communicate())
+        print ("*** Running ls -l command ***\n", output)
+        out.close()
+        print ("file closed")
+    #added 12/09 open data file as a plot
+    def on_open(self):
+        filenames = self.get_opennames()
+        self.load_files(filenames)   
+    def get_opennames(self):
+        filenames = QFileDialog.getOpenFileNames(self,
+                                                 "Select data file(s)",
+                                                 self.last_dir,
+                                                 FILE_SELECTOR_STRING)
+
+        if isinstance(filenames, tuple):
+            filenames = filenames[0]
+        if filenames:
+            self.last_dir = os.path.dirname(unicode(filenames[0]))
+    def load_files(self, filenames, set_last_dir=True):
+        if not filenames:
+            return
+
+        #self.update_tabs = self.viewArea.currentWidget() is not None
+
+        self.busy_start()
+
+        if isinstance(filenames[0], ResultSet):
+            results = filenames
+            titles = self.shorten_titles([r.title for r in results])
+        else:
+            results = list(filter(None, self.worker_pool.map(results_load_helper,
+                                                             map(unicode,
+                                                                 filenames))))
+
+            titles = self.shorten_titles([r['title'] for r in results])
+
+        self.focus_new = True
+
+        self.load_queue.extend(zip(results, titles))
+        self.load_timer.start()
+        print("load_timer.start()") 
+
+        if set_last_dir:
+            self.last_dir = os.path.dirname(unicode(filenames[-1]))      
+            
+        #ResultWidget.show()   
+        
+    def load_one(self):
+        if not self.load_queue:
+            self.load_timer.stop()
+            print(".111load_timer.stop()")
+            return
+
+        r, t = self.load_queue.pop(0)
+
+        widget = self.ui.viewArea.currentWidget()
+        print("widget",widget)
+        if widget is not None:
+            current_plot = widget.current_plot
+        else:
+            current_plot = None
+
+        try:
+            if widget is None or widget.is_active:
+                widget = self.add_tab(r, t, current_plot, focus=False)
+            else:
+                widget.load_results(r, plot=current_plot)
+            self.open_files.add_file(widget.results)
+        except Exception as e:
+            logger.exception("Error while loading data file: '%s'. Skipping.",
+                             str(e))
+
+        if not self.load_queue:
+            #self.openFilesView.resizeColumnsToContents()
+            #self.metadata_column_resize()
+            '''if self.update_tabs:
+                self.shorten_tabs()'''
+            self.load_timer.stop()
+            print(".2222load_timer.stop()")
+            self.redraw_near()
+            self.busy_end()
+    
+    
+                
+    def read_log_queue(self):
+        while not self.log_queue.empty():
+            msg = self.log_queue.get_nowait()
+            logging.getLogger().handle(msg)
+
+    def get_last_dir(self):
+        if 'savefig.directory' in matplotlib.rcParams:
+            return matplotlib.rcParams['savefig.directory']
+        return self._last_dir
+
+    def set_last_dir(self, value):
+        if 'savefig.directory' in matplotlib.rcParams:
+            matplotlib.rcParams['savefig.directory'] = value
+        else:
+            self._last_dir = value
+    last_dir = property(get_last_dir, set_last_dir)
+
+    def read_settings(self):
+        settings = QSettings("Flent", "GUI")
+        if settings.contains("mainwindow/geometry"):
+            geom = settings.value("mainwindow/geometry")
+            if hasattr(geom, 'toByteArray'):
+                geom = geom.toByteArray()
+            self.restoreGeometry(geom)
+
+        if settings.contains("mainwindow/windowState"):
+            winstate = settings.value("mainwindow/windowState")
+            if hasattr(winstate, 'toByteArray'):
+                winstate = winstate.toByteArray()
+
+            version = settings.value("mainwindow/windowStateVersion", 0)
+            if hasattr(version, "toInt"):
+                version = version.toInt()[0]
+            version = int(version)
+
+            if version == WINDOW_STATE_VERSION:
+                self.restoreState(winstate)
+                self.metadata_visibility()
+                self.plot_visibility()
+                self.plot_settings_visibility()
+                self.open_files_visibility()
+            else:
+                logger.debug("Discarding old window state (version %d!=%d)",
+                             version, WINDOW_STATE_VERSION)
+
+        if settings.contains("open_files/columns"):
+            value = settings.value("open_files/columns")
+            if hasattr(value, 'toString'):
+                value = value.toString()
+            self.open_files.restore_columns(value)
+
+        if settings.contains("open_files/column_order"):
+            value = settings.value("open_files/column_order")
+            if hasattr(value, 'toByteArray'):
+                value = value.toByteArray()
+            self.openFilesView.horizontalHeader().restoreState(value)
+            self.openFilesView.setSortingEnabled(True)
+
+    def closeEvent(self, event):
+        # Cleaning up matplotlib figures can take a long time; disable it when
+        # the application is exiting.
+        for i in range(self.ui.viewArea.count()):
+            widget = self.ui.viewArea.widget(i)
+            widget.setUpdatesEnabled(False)
+            widget.disable_cleanup()
+        settings = QSettings("Flent", "GUI")
+        settings.setValue("mainwindow/geometry", self.saveGeometry())
+        settings.setValue("mainwindow/windowState", self.saveState())
+        settings.setValue("mainwindow/windowStateVersion", WINDOW_STATE_VERSION)
+        settings.setValue("open_files/columns", self.open_files.save_columns())
+        #settings.setValue("open_files/column_order",self.openFilesView.horizontalHeader().saveState())
+
+        self.worker_pool.terminate()
+
+        event.accept()
+
+    def keyPressEvent(self, event):
+        widget = self.ui.viewArea.currentWidget()
+        text = unicode(event.text())
+        if widget and text in ('x', 'X', 'y', 'Y'):
+            a = text.lower()
+            d = 'in' if a == text else 'out'
+            widget.zoom(a, d)
+            event.accept()
+        else:
+            super(wmm_test, self).keyPressEvent(event)
+
+    # Helper functions to update menubar actions when dock widgets are closed
+    def plot_visibility(self):
+        self.actionPlotSelector.setChecked(not self.plotDock.isHidden())
+
+    def plot_settings_visibility(self):
+        self.actionPlotSettings.setChecked(not self.plotSettingsDock.isHidden())
+
+    def metadata_visibility(self):
+        self.actionMetadata.setChecked(not self.metadataDock.isHidden())
+
+    def open_files_visibility(self):
+        self.actionOpenFiles.setChecked(not self.openFilesDock.isHidden())
+
+    def log_entries_visibility(self):
+        self.actionLogEntries.setChecked(not self.logEntriesDock.isHidden())
+
+    def metadata_column_resize(self):
+        self.metadataView.resizeColumnToContents(0)
+
+    def update_checkboxes(self):
+        for i in range(self.ui.viewArea.count()):
+            widget = self.ui.viewArea.widget(i)
+            if widget is not None:
+                widget.highlight(self.checkHighlight.isChecked())
+
+        self.log_settings(self.checkDebugLog.isChecked(),
+                          self.checkExceptionLog.isChecked())
+
+        idx = self.ui.viewArea.currentIndex()
+        if idx >= 0:
+            self.redraw_near(idx)
+
+    def log_settings(self, debug=False, exceptions=False):
+        self.logEntries.setLevel(loggers.DEBUG if debug else loggers.INFO)
+        self.logEntries.format_exceptions = exceptions
+
+        if self.new_test_dialog is not None:
+            self.new_test_dialog.log_settings(debug, exceptions)
+
+
+    def data_ready(self):
+        for s in self.sockets:
+            if s.isReadable():
+                stream = QDataStream(s)
+                filenames = stream.readQStringList()
+                self.load_files(filenames)
+                self.sockets.remove(s)
+                self.raise_()
+                self.activateWindow()
+
+    def update_statusbar(self, idx):
+        self.statusBar().showMessage(
+            self.metadataView.model().data(idx, Qt.StatusTipRole), 1000)          
+    #end open data file        
+                    
+    def abort_test(self):
+        if QMessageBox.question(self, "Abort test?",
+                                "Are you sure you want to abort "
+                                "the current test?",
+                                QMessageBox.Yes | QMessageBox.No) \
+           != QMessageBox.Yes:
+            return
+
+        logger.info("Aborting test.")
+        os.kill(self.pid, signal.SIGTERM)
+        self.ui.runButton.setEnabled(False)
+        self.aborted = True
+        logger.debug("Waiting for child process with PID %d to exit.", self.pid)
+    
+    def reset(self):
+        '''self.testConfig.setEnabled(True)'''
+        self.ui.runButton.setText("&Run test")
+        self.ui.runButton.setDefault(True)
+        self.ui.runButton.setEnabled(True)
+        self.ui.progressBar.setValue(0)
+        self.monitor_timer.stop()
+        print ("self.monitor_timer.stop()") 
+        self.pid = None
+        self.aborted = False
+
+    
+    def show(self):
+        super(wmm_test, self).show()
+        add_log_handler(self.logEntries, replay=False)
+
+    def update_progress(self):
+           
+        if not self.aborted:
+                elapsed = time.time() - self.start_time
+                #print("elapsed",elapsed)
+                #print("self.start_time",self.start_time)
+                #print("self.total_time",self.total_time)
+                self.ui.progressBar.setValue(100 * elapsed / self.total_time)
+                
+                fn = os.path.join(self.settings.DATA_DIR,
+                              self.settings.DATA_FILENAME)
+                #print("befor os.path.exists(fn")
+                if os.path.exists(fn):
+                    print("in the os.path.exists(fn")
+                    print(fn)
+                    self.reset()
+                    self.load_files([fn])     
+                
+        else:
+            print("**********************************in the else for loading file")          
+            self.reset()
+                 
+         
+                    
+    def update_plots(self, testname, plotname):
+        for i in range(self.ui.viewArea.count()):
+            widget = self.ui.viewArea.widget(i)
+            if widget and widget.settings.NAME == testname:
+                widget.change_plot(plotname)
+
+        idx = self.ui.viewArea.currentIndex()
+        if idx >= 0:
+            self.redraw_near(idx)
+    
+    def add_tab(self, results=None, title=None, plot=None, focus=True):
+        widget = ResultWidget(self.ui.viewArea, self.settings, self.worker_pool)
+        widget.update_start.connect(self.busy_start)
+        widget.update_end.connect(self.busy_end)
+        widget.update_end.connect(self.update_save)
+        widget.plot_changed.connect(self.update_plots)
+        widget.name_changed.connect(self.shorten_tabs)
+        if results:
+            widget.load_results(results, plot)
+        if title is None:
+            title = widget.title
+        idx = self.ui.viewArea.addTab(widget, title)
+        if hasattr(widget, "long_title"):
+            self.ui.viewArea.setTabToolTip(idx, widget.long_title)
+        if focus or self.focus_new:
+            self.ui.viewArea.setCurrentWidget(widget)
+            self.focus_new = False
+
+        return widget
+    
+    
+            
+    def run_or_abort(self):
+        if self.pid is None:
+            print("run on abort")
+            self.run_test()
+        else:
+            self.abort_test()
+       
+    def run_test(self):  
+        self.settings.INDEX="3"    
+        index=self.settings.INDEX
+        print("config1 :",self.settings.config1)
+        self.settings.LEN=len(self.settings.config1)
+        print("len tab",self.settings.LEN)
+        print ("running test")
+        test ="tcp_4up"
+        print (test)
+        bidirectional = False
+        if hasattr(test, 'toString'):
+            test = test.toString()
+        host = self.ui.hostName.text()
+        print(host)
+        path = self.ui.outputDir.text()
+        print(path)
+        if not test :
+            logger.error("You must select a test to run .")
+            return
+    
+        if not host:
+            logger.error("You must set a "
+                         "hostname to connect to.")
+            return
+            #host ='eth0'
+            
+        if not os.path.isdir(path):
+            logger.error("Output directory does not exist.")
+            return
+        
+        
+        if not (self.ui.test_title.text()):
+            
+            logger.error("Test title is missing .")
+            return
+        self.settings.bidirectionnal = False
+        if self.ui.bidirectional.isChecked() :
+            self.settings.bidirectionnal =True
+        bidirectional =self.settings.bidirectionnal
+        bidirectional = unicode(bidirectional)
+        test = unicode(test)
+        host = unicode(host)
+        path = unicode(path)
+        index= unicode(index)
+        config1 = self.settings.config1
+        tr = self.settings.tr
+        
+        
+        self.log_queue = Queue()
+        self.settings=Settings(DEFAULT_SETTINGS).copy()
+        self.settings.INPUT = []
+        self.settings.BATCH_NAMES = []
+        self.settings.HOSTS = [host]
+        self.settings.NAME = test
+        self.settings.TITLE = unicode(self.ui.test_title.text())
+        self.settings.LENGTH = self.ui.testLength.value()
+        self.settings.LEN = unicode(len(config1))
+        self.settings.tr = unicode(tr)
+        self.settings.DATA_DIR = path
+        self.settings.STEP_SIZE = 0.2
+        self.settings.TEST_PARAMETERS = {}
+        #self.settings.EXTENDED_METADATA = self.extendedMetadata.isChecked()
+        self.settings.load_test(informational=True)
+        self.settings.FORMATTER = "null"
+        self.settings.TIME = datetime.utcnow()
+
+        self.settings.DATA_FILENAME = None
+        res = resultset.new(self.settings)
+        self.settings.DATA_FILENAME = res.dump_filename
+
+        self.total_time = self.settings.TOTAL_LENGTH
+        self.start_time = time.time()
+        self.settings.config1 = config1
+        self.settings.INDEX = index
+        self.settings.tr = tr
+        self.settings.bidirectionnal = bidirectional
+        '''self.testConfig.setEnabled(False)'''
+        self.ui.runButton.setText("&Abort test")
+        self.ui.runButton.setDefault(False)
+
+        if(self.ui.checkBox_CPU.isChecked()):
+            x=get_CPU_usage(self)
+        #logger.debug("CPU usage :", x)   
+        b = batch.new(self.settings)
+        print ("this is the famous b")
+        print(b)
+                
+        self.pid = b.fork_and_run(self.log_queue)
+        self.monitor_timer.start()
+        print ("self.monitor_timer.start()")
+        
+def get_CPU_usage(self):
+        HOST = "192.168.3.1"
+        user = "root"
+        password = "sah"
+        tn = telnetlib.Telnet(HOST)
+        tn.read_until(b"login: ")
+        tn.write(user.encode('ascii') + b"\n")
+        if password:
+            tn.read_until(b"Password: ")
+            tn.write(password.encode('ascii') + b"\n")
+        tn.write(b"mpstat \r\n")
+        result = tn.read_until(b"/cfg/system/root #exit", 2).decode('ascii')
+        try :
+            cpu_idle = result.split("\n")[-2].split("  ")[-1]
+        except :    
+            cpu_idle = "100"
+        tn.write(b"exit\n")
+        cpu_usage = str(100 - float(cpu_idle))
+        print("CPU usage :",cpu_usage[:4])
+        logger.debug("CPU usage :%s " % cpu_usage[:4])
+        return (cpu_usage[:4])
+    
+def get_Memory_usage(self):
+        HOST = "192.168.3.1"  
+        
+        user = "root"
+        password = "sah"
+        tn = telnetlib.Telnet(HOST)
+        tn.read_until(b"login: ")
+        tn.write(user.encode('ascii') + b"\n")
+        if password:
+            tn.read_until(b"Password: ")
+            tn.write(password.encode('ascii') + b"\n")
+        tn.write(b"free \r\n")
+        result = tn.read_until(b"/cfg/system/root #exit", 2).decode('ascii')
+        try :
+            memory_usage = result.split("\n")[-2].split()[-2]
+            memory_usage = memory_usage[:3]
+        except :    
+            memory_usage = "0"
+        print('Memory usage :',memory_usage)
+        return(memory_usage)                
 class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
     def __init__(self):
         self.configfile="config_WMM_test.ini"
@@ -2927,6 +3361,12 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
         Ui_MainWindow, QtBaseClass = uic.loadUiType(os.path.join(DATA_DIR, 'ui', "Wmm_Configuration.ui"))
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.settings = settings
+      
+        self.pid = None
+        self.aborted = False
+        self.settings.GUI = False
+        
             #set the add icons
         add_new_host_icon = QtGui.QIcon()
         add_new_host_icon.addPixmap(QtGui.QPixmap("ui/static/add.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -2939,12 +3379,7 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
         ## add new host button handler
         self.ui.add_new_host.clicked.connect(self.handler_add_new_host_button)
         self.set_config_table()
-        
-        
-      
-    
-        
-    
+   
     
     def handler_ok_button(self):
         number = self.get_config_hosts_number()
@@ -2963,6 +3398,7 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
         
                 
         config = ConfigParser()
+    
         for row in range(0,allRows): 
             try :
                 config[self.ui.tableWidget.item(row,0).text()] = {'Traffic': self.ui.tableWidget.item(row,0).text(),'DSCP_Value': self.ui.tableWidget.item(row,1).text(),'Protocol': self.ui.tableWidget.item(row,2).text(),'Bandwidth(MB/s)': self.ui.tableWidget.item(row,3).text(),'Option': self.ui.tableWidget.item(row,4).text()}
@@ -3005,7 +3441,8 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
     def handler_delete_button(self, index):
         def calluser():
             self.ui.tableWidget.removeRow(index)
-        return calluser            
+        return calluser
+                
     def set_config_table(self):
         ## Get the config file 
         config = self.get_config_data()
@@ -3037,6 +3474,17 @@ class config_wmmTest (getUiClass("Wmm_Configuration.ui")):
         j = 0
         k = 0
         print(config)
+        self.settings.config1 = config
+        
+        lene = len (self.settings.config1)
+        tr=[]
+        for i in range(lene):
+            tr.append(self.settings.config1[i]["traffic"])
+        
+        
+        print("tr:", tr) 
+        self.settings.tr= tr  
+        print("config1 :",self.settings.config1)
         for i in config:
             for k in range(0,5):
                 if k == 0 :

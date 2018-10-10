@@ -140,7 +140,10 @@ class RunnerBase(object):
         self.settings.CONTROL_LOCAL_BIND =[]
         #self.settings.TEST_PARAMETERS = {}
         self.settings.SOCKET_TIMEOUT =[]
+        self.settings.len = 0
         self.config = self.settings.config 
+        self.config1 = self.settings.config1 
+        
         #end modif
         self.idx = idx
         self.test_parameters = {}
@@ -151,7 +154,7 @@ class RunnerBase(object):
         self.out = self.err = ''
         self._parent = parent
         self.result = None
-
+        
         self.start_event = start_event
         self.kill_event = kill_event or Event()
         self.finish_event = finish_event or Event()
@@ -520,12 +523,13 @@ class ProcessRunner(RunnerBase, threading.Thread):
         self.fork()
         super(ProcessRunner, self).start()
 
+
     def run(self):
         """Runs the configured job. If a delay is set, wait for that many
         seconds, then open the subprocess, wait for it to finish, and collect
         the last word of the output (whi3ltespace-separated)."""
-        print("indexxx",self.settings.INDEX)
-        print("config",self.settings.config)
+        print("indexxxx",self.settings.INDEX)
+        print("config",self.settings.config1)
         if self.settings.INDEX == "1" or self.settings.INDEX == "0" :
             if self.start_event is not None:
                 self.start_event.wait()
@@ -678,7 +682,78 @@ class ProcessRunner(RunnerBase, threading.Thread):
     
             logger.debug("%s %s finished", self.__class__.__name__,
                          self.name, extra={'runner': self})
+        elif self.settings.INDEX == "3" :   
+            print("hello index 3")
             
+            #cmd ="killall iperf & iperf -u -s  & "
+            if self.start_event is not None:
+                self.start_event.wait()
+                try:
+                    os.kill(self.pid, signal.SIGUSR2)
+                except OSError:
+                    pass
+    
+            if self.kill_event is None:
+                pid, sts = os.waitpid(self.pid, 0)
+            else:
+                pid, sts = os.waitpid(self.pid, os.WNOHANG)
+                while (pid, sts) == (0, 0):
+                    #os.system(cmd)
+                    self.kill_event.wait(1)
+                    if self.kill_event.is_set():
+                        self.silent_exit = True
+                        logger.debug("%s %s killed by kill event",
+                                     self.__class__.__name__,
+                                     self.name, extra={'runner': self})
+                        try:
+                            os.kill(self.pid, signal.SIGTERM)
+                        except OSError:
+                            pass
+                    pid, sts = os.waitpid(self.pid, os.WNOHANG)
+    
+            self.finish_event.set()
+    
+            self.returncode = _handle_exitstatus(sts)
+    
+            # Even with locking, kill detection is not reliable; sleeping seems to
+            # help. *sigh* -- threading.
+            time.sleep(0.2)
+    
+            if self.is_killed():
+                return
+    
+            self.stdout.seek(0)
+            self.out += self.stdout.read().decode(ENCODING)
+            try:
+                # Close and remove the temporary file. This might fail, but we're
+                # going to assume that is okay.
+                filename = self.stdout.name
+                self.stdout.close()
+                os.unlink(filename)
+            except OSError:
+                pass
+    
+            self.stderr.seek(0)
+            self.err += self.stderr.read().decode(ENCODING)
+            try:
+                filename = self.stderr.name
+                self.stderr.close()
+                os.unlink(filename)
+            except OSError:
+                pass
+    
+            if self.returncode and not (self.silent or self.silent_exit):
+                logger.warning("Program exited non-zero.",
+                               extra={'runner': self})
+    
+            self.result = self.parse(self.out, self.err)
+            if not self.result and not self.silent:
+                logger.warning("Command produced no valid data.",
+                               extra={'runner': self})
+    
+            logger.debug("%s %s finished", self.__class__.__name__,
+                         self.name, extra={'runner': self})
+    
     def parse(self, output, error=""):
         """Default parser returns the last (whitespace-separated) word of
         output as a float."""
@@ -719,13 +794,11 @@ class ProcessRunner(RunnerBase, threading.Thread):
 
 DefaultRunner = ProcessRunner
 
-
 class SilentProcessRunner(ProcessRunner):
     silent = True
 
     def parse(self, output, error=""):
         return None
-
 
 class DitgRunner(ProcessRunner):
     """Runner for D-ITG with a control server."""
@@ -882,269 +955,6 @@ class DitgRunner(ProcessRunner):
 
         self.raw_values = raw_values
 
-
-class NetperfDemoRunner(ProcessRunner):
-    """Runner for netperf demo mode."""
-    transformed_metadata = ('MEAN_VALUE',)
-    output_vars = 'THROUGHPUT,LOCAL_CONG_CONTROL,REMOTE_CONG_CONTROL,' \
-                  'TRANSPORT_MSS,LOCAL_TRANSPORT_RETRANS,' \
-                  'REMOTE_TRANSPORT_RETRANS,LOCAL_SOCKET_TOS,' \
-                  'REMOTE_SOCKET_TOS,DIRECTION,ELAPSED_TIME,PROTOCOL,' \
-                  'LOCAL_SEND_SIZE,LOCAL_RECV_SIZE,' \
-                  'REMOTE_SEND_SIZE,REMOTE_RECV_SIZE,' \
-                  'LOCAL_BYTES_SENT,LOCAL_BYTES_RECVD,' \
-                  'REMOTE_BYTES_SENT,REMOTE_BYTES_RECVD'
-    netperf = {}
-    _env = {"DUMP_TCP_INFO": "1"}
-
-    def __init__(self, test, length, host, bytes=None, **kwargs):
-        self.test = test
-        self.length = length
-        self.host = host
-        self.bytes = bytes
-        super(NetperfDemoRunner, self).__init__(**kwargs)
-
-    def parse(self, output, error=""):
-        """Parses the interim result lines and returns a list of (time,value)
-        pairs."""
-
-        result = []
-        raw_values = []
-        lines = output.strip().splitlines()
-        avg_dur = None
-        alpha = 0.5
-        data_dict = {}
-
-        # We use the -k output option for netperf, so we will get data in
-        # KEY=VALUE lines. The interim points will be NETPERF_*[id] lines,
-        # end-of-test data points will be straight KEY=VAL lines
-        for line in lines:
-            line = line.strip()
-            try:
-                k, v = line.split("=", 1)
-                if k.endswith(']'):
-                    k, i = k.split('[', 1)
-                    i = i[:-1]
-                    if k not in data_dict:
-                        data_dict[k] = []
-                    data_dict[k].append(v)
-                else:
-                    if k in data_dict:
-                        logger.warning("Duplicate key in netperf results: %s", k)
-                    data_dict[k] = v
-            except ValueError:
-                pass
-
-        # TCP_INFO values are output to stderr
-        for line in error.strip().splitlines():
-            line = line.strip()
-            if line.startswith("tcpi"):
-                parts = line.split()
-                data_dict.update(dict(zip(parts[::2], parts[1::2])))
-
-        try:
-            for dur, t, value in zip(data_dict['NETPERF_INTERVAL'],
-                                     data_dict['NETPERF_ENDING'],
-                                     data_dict['NETPERF_INTERIM_RESULT']):
-
-                dur = float(dur)
-                t = float(t)
-                value = float(value)
-
-                if self.test == 'UDP_RR':
-                    value = transformers.rr_to_ms(value)
-
-                # Calculate an EWMA of the netperf sampling duration and exclude
-                # data points from a sampling period that is more than an order
-                # of magnitude higher or lower than this average; these are
-                # probably the result of netperf spitting out a measurement at
-                # the end of a run after having lost the measurement flow during
-                # the run, or a very short interval giving a very high bandwidth
-                # measurement
-                if avg_dur is None:
-                    avg_dur = dur
-
-                if dur < avg_dur * 10.0 and dur > avg_dur / 10.0:
-                    raw_values.append({'dur': dur, 't': t, 'val': value})
-                    result.append([t, value])
-                    avg_dur = alpha * avg_dur + (1.0 - alpha) * dur
-
-            try:
-                # The THROUGHPUT key contains the mean value even for UDP_RR tests
-                self.metadata['MEAN_VALUE'] = float(data_dict['THROUGHPUT'])
-                self.metadata['ELAPSED_TIME'] = float(data_dict.get('ELAPSED_TIME', 0))
-                self.metadata['UPSTREAM_TOS'] = data_dict.get('LOCAL_SOCKET_TOS')
-                self.metadata['DOWNSTREAM_TOS'] = data_dict.get(
-                    'REMOTE_SOCKET_TOS')
-
-                if data_dict['PROTOCOL'] == 'TCP':
-                    self.metadata['TCP_MSS'] = int(data_dict.get('TRANSPORT_MSS',
-                                                                 0))
-                    if data_dict['DIRECTION'] == 'Send':
-                        self.metadata['CONG_CONTROL'] = data_dict.get(
-                            'LOCAL_CONG_CONTROL')
-                        self.metadata['TCP_RETRANSMIT'] = data_dict.get(
-                            'LOCAL_TRANSPORT_RETRANS')
-                        self.metadata['SEND_SIZE'] = int(data_dict.get(
-                            'LOCAL_SEND_SIZE', -1))
-                        self.metadata['RECV_SIZE'] = int(data_dict.get(
-                            'REMOTE_RECV_SIZE', -1))
-                        self.metadata['BYTES_SENT'] = int(data_dict.get(
-                            'LOCAL_BYTES_SENT', -1))
-                        self.metadata['BYTES_RECVD'] = int(data_dict.get(
-                            'REMOTE_BYTES_RECVD', -1))
-                    else:
-                        self.metadata['CONG_CONTROL'] = data_dict.get(
-                            'REMOTE_CONG_CONTROL')
-                        self.metadata['TCP_RETRANSMIT'] = int(data_dict.get(
-                            'REMOTE_TRANSPORT_RETRANS', 0))
-                        self.metadata['SEND_SIZE'] = int(data_dict.get(
-                            'REMOTE_SEND_SIZE', -1))
-                        self.metadata['RECV_SIZE'] = int(data_dict.get(
-                            'LOCAL_RECV_SIZE', -1))
-                        self.metadata['BYTES_SENT'] = int(data_dict.get(
-                            'REMOTE_BYTES_SENT', -1))
-                        self.metadata['BYTES_RECVD'] = int(data_dict.get(
-                            'LOCAL_BYTES_RECVD', -1))
-
-                    for k in data_dict.keys():
-                        if k.startswith("tcpi"):
-                            self.metadata[k.upper()] = int(data_dict[k])
-            except KeyError as e:
-                logger.warning("Missing required netperf metadata: %s", e.args[0])
-
-        except KeyError:
-            pass  # No valid data
-
-        self.raw_values = raw_values
-
-        return result
-
-    def check(self):
-        args = self.runner_args.copy()
-
-        if self.test.lower() == 'omni':
-            raise RunnerCheckError("Use of netperf 'omni' test is not supported")
-
-        args.setdefault('ip_version', self.settings.IP_VERSION)
-        args.setdefault('interval', self.settings.STEP_SIZE)
-        #args.setdefault('control_host', self.settings.CONTROL_HOST or self.host)
-        #args.setdefault('control_port', self.settings.NETPERF_CONTROL_PORT)
-        args.setdefault('local_bind',
-                        self.settings.LOCAL_BIND[0]
-                        if self.settings.LOCAL_BIND else "")
-        args.setdefault('control_local_bind',
-                        self.settings.CONTROL_LOCAL_BIND or args['local_bind'])
-        #args.setdefault('extra_args', "")
-        #args.setdefault('extra_test_args', "")
-        #args.setdefault('format', "")
-        args.setdefault('marking', "")
-        args.setdefault('cong_control',
-                        self.settings.TEST_PARAMETERS.get('tcp_cong_control', ''))
-        args.setdefault('socket_timeout', self.settings.SOCKET_TIMEOUT)
-
-        '''if self.settings.SWAP_UPDOWN:
-            if self.test == 'TCP_STREAM':
-                self.test = 'TCP_MAERTS'
-            elif self.test == 'TCP_MAERTS':
-                self.test = 'TCP_STREAM'''
-
-        if not self.netperf:
-            netperf = util.which('netperf', fail=RunnerCheckError)
-
-            # Try to figure out whether this version of netperf supports the -e
-            # option for socket timeout on UDP_RR tests, and whether it has been
-            # compiled with --enable-demo. Unfortunately, the --help message is
-            # not very helpful for this, so the only way to find out is try to
-            # invoke it and check for an error message. This has the side-effect
-            # of having netperf attempt a connection to localhost, which can
-            # stall, so we kill the process almost immediately.
-
-            # should be enough time for netperf to output any error messages
-            out, err = self.test_run([netperf, '-l', '1', '-D', '-0.2',
-                                      '--', '-e', '1'], kill=True)
-
-            if "Demo Mode not configured" in out:
-                raise RunnerCheckError("%s does not support demo mode." % netperf)
-
-            if "invalid option -- '0'" in err:
-                raise RunnerCheckError(
-                    "%s does not support accurate intermediate time reporting. "
-                    "You need netperf v2.6.0 or newer." % netperf)
-
-            self.netperf['executable'] = netperf
-            self.netperf['-e'] = False
-
-            if "netperf: invalid option -- 'e'" not in err:
-                self.netperf['-e'] = True
-
-            try:
-                # Sanity check; is /dev/urandom readable? If so, use it to
-                # pre-fill netperf's buffers
-                with open("/dev/urandom", "rb") as fp:
-                    fp.read(1)
-                self.netperf['buffer'] = '-F /dev/urandom'
-            except:
-                self.netperf['buffer'] = ''
-
-        args['binary'] = self.netperf['executable']
-        args['output_vars'] = self.output_vars
-        args['buffer'] = self.netperf['buffer']
-        args['test'] = self.test
-        #args.setdefault('host',self.settings.HOSTS)
-        #args['host'] = '127.0.0.1'
-        [args['host']] = self.settings.HOSTS
-        args.setdefault('extra_args', "")
-        args.setdefault('extra_test_args',"")
-        if self.bytes:
-            args['length'] = -self.bytes
-        else:
-            args['length'] = self.length
-            self.watchdog_timer = self.length + 10
-
-        if args['marking']:
-            args['marking'] = "-Y {0}".format(args['marking'])
-
-        if args['cong_control']:
-            args['cong_control'] = "-K {0}".format(args['cong_control'])
-
-        for c in 'local_bind', 'control_local_bind':
-            if args[c]:
-                args[c] = "-L {0}".format(args[c])
-
-        if self.test == "UDP_RR" and self.netperf["-e"]:
-            args['socket_timeout'] = "-e {0:d}".format(args['socket_timeout'])
-        else:
-            args['socket_timeout'] = ""
-
-        '''if self.test in ("TCP_STREAM", "TCP_MAERTS"):
-            args['format'] = "-f m"
-            self.units = 'Mbits/s'
-
-            if args['test'] == 'TCP_STREAM' and self.settings.SOCKET_STATS:
-                self.add_child(SsRunner,
-                               exclude_ports=(args['control_port'],),
-                               delay=self.delay,
-                               remote_host=None,
-                               host=self.remote_host or 'localhost',
-                               interval=args['interval'],
-                               length=self.length,
-                               target=self.host,
-                               ip_version=args['ip_version'])
-
-        elif self.test == 'UDP_RR':
-            self.units = 'ms'''
-
-        self.command = "{binary} -P 0 -v 0 -D -{ip_version} " \
-                       "{marking}  " \
-                       "-t {test} -l {length:d} {buffer} " \
-                       "{control_local_bind} {extra_args} -- " \
-                       "{socket_timeout} {local_bind} -H {host} -k {output_vars} " \
-                       "{cong_control} {extra_test_args}".format(**args)
-
-        super(NetperfDemoRunner, self).check()
-
-
 class RegexpRunner(ProcessRunner):
 
     """Runner that matches each line to one or more regular expressions,
@@ -1165,6 +975,7 @@ class RegexpRunner(ProcessRunner):
         
         return result
 
+    
     @classmethod
     def _parse(cls, output):
         result = []
@@ -1195,7 +1006,9 @@ class RegexpRunner(ProcessRunner):
                         result.append([rw['TIME'], rw['DURATION']])
                         
                     if 'val' in rw:
-                        result.append([rw['t'], rw['val']])    
+                        result.append([rw['t'], rw['val']])  
+                    
+                      
                     break  # only match one regexp per line
             '''for regexp in cls.metadata_regexes:
                 match = regexp.match(line)
@@ -1215,6 +1028,296 @@ class RegexpRunner(ProcessRunner):
         print("raw_values",raw_values)                  
         return result, raw_values, metadata
 
+class NetperfDemoRunner(ProcessRunner):
+    """Runner for netperf demo mode."""
+    transformed_metadata = ('MEAN_VALUE',)
+    output_vars = 'THROUGHPUT,LOCAL_CONG_CONTROL,REMOTE_CONG_CONTROL,' \
+                  'TRANSPORT_MSS,LOCAL_TRANSPORT_RETRANS,' \
+                  'REMOTE_TRANSPORT_RETRANS,' \
+                  'REMOTE_SOCKET_TOS,DIRECTION,ELAPSED_TIME,PROTOCOL,' \
+                  'LOCAL_SEND_SIZE,LOCAL_RECV_SIZE,' \
+                  'REMOTE_SEND_SIZE,REMOTE_RECV_SIZE,' \
+                  'LOCAL_BYTES_SENT,LOCAL_BYTES_RECVD,' \
+                  'REMOTE_BYTES_SENT,REMOTE_BYTES_RECVD,'
+    netperf = {}
+    _env = {"DUMP_TCP_INFO": "1"}
+    
+    transformers = {}
+
+    def __init__(self, test, length, host, bytes=None, **kwargs):
+        self.test = test
+        self.length = length
+        self.host = host
+        self.bytes = bytes
+        super(NetperfDemoRunner, self).__init__(**kwargs)
+    
+    def extraire_port_source(self, raw_values):
+        """ extraire la liste de ports sources """
+        ports = [] 
+        for i in raw_values :  
+            if i.get('portsource') in ports:
+                print(i.get('portsource'))
+            else :
+                ports.append(i.get('portsource'))
+               
+                
+        return ports   
+        
+           
+    def parse(self, output, error=""):
+        """Parses the interim result lines and returns a list of (time,value)
+        pairs."""
+        regexes = [re.compile( r'^(?P<dur>[0-9]+[.]+[0-9][0-9][0-9][0-9][0-9][0-9]), '
+                               r'(?P<date>[0-9]+),'
+                               r'(?P<adressSource>[0-9]+[0-9]+[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+),'
+                               r'(?P<portsource>[0-9]+),'
+                               r'(?P<adressdest>[0-9]+[0-9]+[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+),'
+                               r'(?P<portdest>[0-9]+),'
+                               r'(?P<pid>[0-9]+),'
+                               r'(?P<starttime>[0-9]+\.[0-9]+)-'
+                               r'(?P<endtime>[0-9]+\.[0-9]+),'
+                               r'(?P<transfer>[0-9]+),'
+                               r'(?P<bandwidth>[0-9]+)'
+                    )]
+        result = []
+        raw_values = []
+        lines = output.strip().splitlines()
+        print(output)
+        avg_dur = None
+        alpha = 0.5
+        data_dict = {}
+        transformers = {}
+        # We use the -k output option for netperf, so we will get data in
+        # KEY=VALUE lines. The interim points will be NETPERF_*[id] lines,
+        # end-of-test data points will be straight KEY=VAL lines
+        
+
+        # TCP_INFO values are output to stderr
+
+        for line in lines:
+            for regexp in regexes:
+                match = regexp.match(line)
+                if match:
+                    rw = match.groupdict()
+                    for k, v in rw.items():
+                        try:
+                            rw[k] = float(v)
+                            if k in transformers:
+                                rw[k] = transformers[k](rw[k])
+                        except ValueError:
+                            pass
+                    
+                    raw_values.append(rw)
+                    
+                    if 'starttime' in rw:
+                        result.append([rw['starttime'], rw['bandwidth']]) 
+                   
+                    #result.append([rw['dur'], rw['PageLoadingTime']])
+               
+       
+        '''try:
+            
+            #for dur, t, value in zip( raw_values['starttime'], raw_values['dur'], raw_values['bandwidth']):
+            result_list = [int(v) for k,v in raw_values[0].items()]
+            print(result_list)
+            dur = float(dur)
+            t = float(t)
+            value = float(value)
+
+                
+                # Calculate an EWMA of the netperf sampling duration and exclude
+                # data points from a sampling period that is more than an order
+                # of magnitude higher or lower than this average; these are
+                # probably the result of netperf spitting out a measurement at
+                # the end of a run after having lost the measurement flow during
+                # the run, or a very short interval giving a very high bandwidth
+                # measurement
+                if avg_dur is None:
+                    avg_dur = dur
+
+                if dur < avg_dur * 10.0 and dur > avg_dur / 10.0:
+                    raw_values.append({'dur': dur, 't': t, 'val': value})
+                    result.append([t, value])
+                    avg print("La clé {} contient la valeur {}.".format(cle, valeur))_dur = alpha * avg_dur + (1.0 - alpha) * dur
+            '''
+        try:
+                # The THROUGHPUT key contains the mean value even for UDP_RR tests
+                self.metadata['MEAN_VALUE'] = float(data_dict['bandwidth'])
+             
+        except KeyError as e:
+                logger.warning("Missing required netperf metadata: %s", e.args[0])
+       
+        except KeyError:
+            pass  # No valid data'''
+        
+        self.raw_values = raw_values
+        ports = self.extraire_port_source(raw_values)
+        print(ports) 
+        self.ports =ports 
+
+        return result
+     
+
+    def check(self):
+        args = self.runner_args.copy()
+    
+
+        args.setdefault('ip_version', self.settings.IP_VERSION)
+        args.setdefault('interval', self.settings.STEP_SIZE)
+        args.setdefault('control_host',  self.settings.HOSTS)
+        args.setdefault('control_port', 12865)
+        args.setdefault('local_bind',
+                        self.settings.LOCAL_BIND[0]
+                        if self.settings.LOCAL_BIND else "")
+        args.setdefault('control_local_bind',
+                        self.settings.CONTROL_LOCAL_BIND or args['local_bind'])
+        args.setdefault('extra_args', "")
+        args.setdefault('extra_test_args', "")
+        args.setdefault('format', "")
+        args.setdefault('marking', "")
+        args.setdefault('cong_control',
+                        self.settings.TEST_PARAMETERS.get('tcp_cong_control', ''))
+        args.setdefault('socket_timeout', self.settings.SOCKET_TIMEOUT)
+
+        args['test'] = self.test
+        #args['host'] = self.host   
+        [self.host] =self.settings.HOSTS
+
+        if self.bytes:
+            args['length'] = -self.bytes
+        else:
+            args['length'] = self.length
+            self.watchdog_timer = self.length + 10
+
+        if args['marking']:
+            args['marking'] = "-Y {0}".format(args['marking'])
+
+        if args['cong_control']:
+            args['cong_control'] = "-K {0}".format(args['cong_control'])
+
+        for c in 'local_bind', 'control_local_bind':
+            if args[c]:
+                args[c] = "-L {0}".format(args[c])
+      
+        lene = len (self.settings.config1)
+        print("length",lene)
+        
+        '''cmd ="iperfsh"
+
+        for i in range(lene):
+            traffic=self.settings.config1[i]["traffic"]
+            dscp_value=self.settings.config1[i]["dscp_value"]
+            bandwidth=self.settings.config1[i]["bandwidth(mb/s)"]
+            protocol=self.settings.config1[i]["protocol"]
+
+            cmd += " {0} {1} {2} {3} ".format('127.0.0.1',bandwidth,dscp_value,self.length)
+            
+         '''
+        #self.command = " {c} ".format(c=cmd )
+        if (self.settings.bidirectionnal == True):
+            self.command = self.find_binary2(host=self.host, **args)
+        else:
+            self.command = self.find_binary1(host=self.host, **args)
+            
+        print(self.command)                                                            
+        super(NetperfDemoRunner, self).check()
+        
+    
+    def find_binary1(self,host, **kwargs):
+
+        cmd ="iperfsh"
+        
+        lene = len (self.settings.config1)
+        for i in range(lene):
+            traffic=self.settings.config1[i]["traffic"]
+            dscp_value=self.settings.config1[i]["dscp_value"]
+            bandwidth=self.settings.config1[i]["bandwidth(mb/s)"]
+            protocol=self.settings.config1[i]["protocol"]
+            
+            if(protocol == "TCP" ):
+                cmd += " {0} {1} {2} {3} {4}".format(host,bandwidth,dscp_value,self.length,"False")
+            else:
+                cmd += " {0} {1} {2} {3} {4}".format(host,bandwidth,dscp_value,self.length,"True")
+            
+        
+        #return "{binary} -o /dev/null -s -w \" \$(date +%H\:%M\:%S\) %{time_namelookup} %{time_connect} %{time_total}\n\" {host2}[1-10] ".format(
+        return  " {c} ".format(c=cmd)                                                                                                              
+                                                                                                                                      
+        raise RunnerCheckError("No suitable curl tool found.")
+
+    def find_binary2(self, host, **kwargs):
+        
+        cmd ="iperfsh2"
+        
+        lene = len (self.settings.config1)
+        for i in range(lene):
+            traffic=self.settings.config1[i]["traffic"]
+            dscp_value=self.settings.config1[i]["dscp_value"]
+            bandwidth=self.settings.config1[i]["bandwidth(mb/s)"]
+            protocol=self.settings.config1[i]["protocol"]
+
+            cmd += " {0} {1} {2} {3} ".format('127.0.0.1',bandwidth,dscp_value,self.length)
+            
+        
+        #return "{binary} -o /dev/null -s -w \" \$(date +%H\:%M\:%S\) %{time_namelookup} %{time_connect} %{time_total}\n\" {host2}[1-10] ".format(
+        return  " {c} ".format(c=cmd)                                                                                                               
+                                                                                                                                      
+        raise RunnerCheckError("No suitable curl tool found.")
+    
+class WmmRunner(RegexpRunner):
+    _env = {"LC_ALL": "C", "LANG": "C"}
+     
+    def __init__(self,INDEX, config1, host, **kwargs):
+        self.host = host
+        print("conffffffffff",config1)
+        print("iiiii",INDEX)
+       
+        super(WmmRunner, self).__init__(**kwargs)
+        print("test wmm runner")
+        
+    def check(self):
+        args = self.runner_args.copy()
+        args.setdefault('local_bind', (self.settings.LOCAL_BIND[0]
+                                       if self.settings.LOCAL_BIND else None))
+        args.setdefault('ip_version', self.settings.IP_VERSION)
+        args.setdefault('length', self.settings.TOTAL_LENGTH)
+        args.setdefault('config1', self.settings.config1)
+        args.setdefault('INDEX', self.settings.INDEX)
+        
+        [self.host] =self.settings.HOSTS
+    
+        i =0
+        #print("conffff",self.settings.config)
+        #for i in self.settings.TOTAL_LENGTH:
+        self.command = self.find_binary(host=self.host, **args)
+        #i = i + 1
+        print(self.command)   
+        super(WmmRunner, self).check()
+       
+        
+    def find_binary(self, config1, length, host, **kwargs):
+        
+        print("cocococ",config1)
+
+        curl = util.which('curl')
+        curlargs = []
+        i = 0;
+        raw = []
+
+        #return "{binary} -o /dev/null -s -w \" \$(date +%H\:%M\:%S\) %{time_namelookup} %{time_connect} %{time_total}\n\" {host2}[1-10] ".format(
+        return "".format(
+                binary=curl,
+                length=5*length,
+                vide='{}',
+                host1='http://www.online.no/',
+                host2=host,
+                time_namelookup='{time_namelookup}',
+                time_connect='{time_connect}',
+                time_total='{time_total}',
+                curlargs=" ".join(curlargs))                                                                                                                
+                                                                                                                                      
+        raise RunnerCheckError("No suitable curl tool found.")   
+        
 class UserestimationRunner(RegexpRunner):
     """Runner for user estimation (DNS lookup/ """
 
@@ -1223,6 +1326,8 @@ class UserestimationRunner(RegexpRunner):
     # avoid this breaking stuff.
     _env = {"LC_ALL": "C", "LANG": "C"}
 
+
+    
     # For some reason some versions of ping output icmp_req and others icmp_seq
     # for sequence numbers.
     regexes = [re.compile( r'^(?P<time>[0-9]+.[0-9]+) '
@@ -1279,6 +1384,7 @@ class UserestimationRunner(RegexpRunner):
                 curlargs=" ".join(curlargs))                                                                                                                
                                                                                                                                       
         raise RunnerCheckError("No suitable curl tool found.")
+
 class PingRunner(RegexpRunner):
     """Runner for ping/ping6 in timestamped (-D) mode."""
 
@@ -1438,11 +1544,6 @@ class PingRunner(RegexpRunner):
                     local_bind="-I {0}".format(local_bind) if local_bind else "",
                     host=host,
                     pingargs=" ".join(pingargs))
-                
-            
-            
-
-                
 
         raise RunnerCheckError("No suitable pping tool found.")
 
@@ -2585,7 +2686,6 @@ class NetstatRunner(ProcessRunner):
 
 class NullRunner(RunnerBase):
     pass
-
 
 class ComputingRunner(RunnerBase):
     command = "Computed"
